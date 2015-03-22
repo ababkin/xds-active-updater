@@ -1,0 +1,48 @@
+name:                xds-active-updater
+version:             0.1.0.0
+description:         Dataset active updater for xdataset
+license:             AllRightsReserved
+author:              Alex Babkin
+maintainer:          ababkin@gmail.com
+build-type:          Simple
+cabal-version:       >=1.8
+
+executable xds-active-updater
+  hs-source-dirs: src
+  main-is:        Main.hs
+  ghc-options:    
+    -static 
+    -Wall 
+    -threaded 
+    -O2
+    -rtsopts
+    "-with-rtsopts=-N"
+  -- ghc-options:
+    -- -Wall
+    -- -O2
+    -- -threaded
+    -- -prof
+    -- -fprof-auto
+    -- -rtsopts
+    -- "-with-rtsopts=-N4 -p -s -hc -i0.1 -K100M"
+  -- ghc-options:
+    -- -Wall
+    -- -O2
+    -- -threaded
+    -- -rtsopts
+    -- -eventlog
+    -- "-with-rtsopts=-N4 -l"
+  buildable: True
+  build-depends:
+      base
+    , text
+    , mtl
+    , stm
+    , transformers
+    , aeson
+    , bytestring
+    , containers
+    , async
+    , amqp
+    , wreq
+
