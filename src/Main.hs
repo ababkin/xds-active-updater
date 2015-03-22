@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import           Control.Concurrent         (threadDelay)
+import           Control.Lens               ((&), (.~))
 import           Control.Monad              (forever)
 import           Data.Aeson                 (FromJSON (parseJSON),
                                              ToJSON (toJSON), Value (Object),
@@ -10,6 +11,7 @@ import           Data.Aeson                 (FromJSON (parseJSON),
 import           Data.Aeson.Types           (typeMismatch)
 
 import           Control.Applicative        ((<$>))
+import           Control.Exception          as E
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text                  as T
 import           Network.AMQP               (Ack (..), Connection, Envelope,
@@ -18,9 +20,12 @@ import           Network.AMQP               (Ack (..), Connection, Envelope,
                                              declareQueue, getMsg, msgBody,
                                              newQueue, openChannel,
                                              openConnection, rejectEnv)
-import           Network.Wreq               (Response, asJSON, get, post,
-                                             responseBody)
+import           Network.HTTP.Client        (HttpException (StatusCodeException))
+import           Network.Wreq               (Response, asJSON, defaults, get,
+                                             header, postWith, responseBody)
 import           System.Environment         (getEnv, lookupEnv)
+
+
 
 
 data RailsResponse = RailsResponse {
@@ -67,16 +72,26 @@ main = do
           Left err ->
             putStrLn $ "could not parse json: " ++ err
           Right (jsonMsg :: Value) -> do
-            xdsHost <- getEnv "XDS_HOST"
+            update jsonMsg env `E.catch` handler
 
-            let url = "http://" ++ xdsHost ++ "/updates.json"
-            jsonResp <- post url jsonMsg
-            case asJSON jsonResp of
-              Right (r :: Response RailsResponse) -> do
-                print $ "received response: " ++ show r
-                {- SearchResponse $ map hDataset $ hsHits $ srHits (r ^. responseBody) -}
-                ackEnv env
-              Left err -> do
-                print $ show err
-                rejectEnv env True
+    where
+      update jsonMsg env = do
+        xdsHost <- getEnv "XDS_HOST"
+
+        let url = "http://" ++ xdsHost ++ "/updates"
+        let opts = defaults & header "Accept" .~ ["application/json"]
+        jsonResp <- postWith opts url jsonMsg
+        case asJSON jsonResp of
+          Right (r :: Response RailsResponse) -> do
+            print $ "received response: " ++ show r
+            {- SearchResponse $ map hDataset $ hsHits $ srHits (r ^. responseBody) -}
+            ackEnv env
+          Left err -> do
+            print $ show err
+            rejectEnv env True
+
+      handler e@(StatusCodeException s _ _) = do
+        putStrLn $ "exception: " ++ show s
+        {- | s ^. statusCode == 401 = getWith authopts authurl -}
+        {- | otherwise              = throwIO e -}
 

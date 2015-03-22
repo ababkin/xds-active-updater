@@ -45,4 +45,6 @@ executable xds-active-updater
     , async
     , amqp
     , wreq
+    , lens
+    , http-client
 
