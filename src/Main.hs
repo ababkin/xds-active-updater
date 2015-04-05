@@ -61,13 +61,6 @@ main = do
         let message = msgBody msg
         putStrLn $ "UPDATE received: " ++ BL.unpack message
 
-        {- result <- jsonResult $ msgBody msg -}
-
-        {- chan <- openChannel conn -}
-        {- publishMsg chan "" outgoingQ -}
-          {- -- What to use for Id ? -}
-          {- newMsg {msgBody         = result, -}
-                  {- msgDeliveryMode = Just Persistent} -}
         case eitherDecode message of
           Left err ->
             putStrLn $ "could not parse json: " ++ err
@@ -84,7 +77,6 @@ main = do
         case asJSON jsonResp of
           Right (r :: Response RailsResponse) -> do
             print $ "received response: " ++ show r
-            {- SearchResponse $ map hDataset $ hsHits $ srHits (r ^. responseBody) -}
             ackEnv env
           Left err -> do
             print $ show err
@@ -92,6 +84,4 @@ main = do
 
       handler e@(StatusCodeException s _ _) = do
         putStrLn $ "exception: " ++ show s
-        {- | s ^. statusCode == 401 = getWith authopts authurl -}
-        {- | otherwise              = throwIO e -}
 

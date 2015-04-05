@@ -1,0 +1,7 @@
+export RMQ_IP="localhost"
+export RMQ_PORT="5672"
+export RMQ_USERNAME="guest"
+export RMQ_PASSWORD="guest"
+
+export XDS_HOST="localhost:3000"
+
