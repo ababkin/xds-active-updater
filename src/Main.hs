@@ -14,17 +14,13 @@ import           Control.Applicative        ((<$>))
 import           Control.Exception          as E
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text                  as T
-import           Network.AMQP               (Ack (..), Connection, Envelope,
-                                             Message, QueueOpts (..), ackEnv,
-                                             bindQueue, consumeMsgs,
-                                             declareQueue, getMsg, msgBody,
-                                             newQueue, openChannel,
-                                             openConnection, rejectEnv)
 import           Network.HTTP.Client        (HttpException (StatusCodeException))
 import           Network.Wreq               (Response, asJSON, defaults, get,
                                              header, postWith, responseBody)
 import           System.Environment         (getEnv, lookupEnv)
 
+import           Xds.Amqp                   (Status (Success, Failure), getAmqp,
+                                             pollQueue, withAmqpChannel)
 
 
 
@@ -42,33 +38,22 @@ incomingQ = "update"
 
 main :: IO ()
 main = do
-  rmqIp       <- getEnv "RMQ_IP"
-  rmqPort     <- getEnv "RMQ_PORT"
-  rmqUsername <- getEnv "RMQ_USERNAME"
-  rmqPassword <- getEnv "RMQ_PASSWORD"
-
-  rmqConn     <- openConnection rmqIp "/" (T.pack rmqUsername) (T.pack rmqPassword)
-
-  chan <- openChannel rmqConn
+  amqp <- getAmqp
   {- consumeMsgs chan incomingQ Ack handler -}
 
-  forever $ do
-    threadDelay 1000000
-    maybeMsg <- getMsg chan Ack incomingQ
-    case maybeMsg of
-      Nothing -> return ()
-      Just (msg, env) -> do
-        let message = msgBody msg
-        putStrLn $ "UPDATE received: " ++ BL.unpack message
-
-        case eitherDecode message of
-          Left err ->
-            putStrLn $ "could not parse json: " ++ err
-          Right (jsonMsg :: Value) -> do
-            update jsonMsg env `E.catch` handler
+  withAmqpChannel amqp $ \chan ->
+    pollQueue incomingQ chan 1000000 $ \message -> do
+      putStrLn $ "UPDATE received: " ++ BL.unpack message
+      case eitherDecode message of
+        Left err -> do
+          putStrLn $ "could not parse json: " ++ err
+          return Failure
+        Right (jsonMsg :: Value) -> do
+          update jsonMsg `E.catch` handler
 
     where
-      update jsonMsg env = do
+      update :: Value -> IO Status
+      update jsonMsg = do
         xdsHost <- getEnv "XDS_HOST"
 
         let url = "http://" ++ xdsHost ++ "/updates"
@@ -77,11 +62,11 @@ main = do
         case asJSON jsonResp of
           Right (r :: Response RailsResponse) -> do
             print $ "received response: " ++ show r
-            ackEnv env
+            return Success
           Left err -> do
             print $ show err
-            rejectEnv env True
+            return Failure
 
       handler e@(StatusCodeException s _ _) = do
         putStrLn $ "exception: " ++ show s
-
+        return Failure

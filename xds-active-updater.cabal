@@ -43,8 +43,8 @@ executable xds-active-updater
     , bytestring
     , containers
     , async
-    , amqp
     , wreq
     , lens
     , http-client
+    , xds-amqp
 
