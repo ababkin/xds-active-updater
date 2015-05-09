@@ -22,8 +22,6 @@ import           System.Environment         (getEnv, lookupEnv)
 import           Xds.Amqp                   (Status (Success, Failure), getAmqp,
                                              pollQueue, withAmqpChannel)
 
-
-
 data RailsResponse = RailsResponse {
     status :: String
 } deriving (Show)

@@ -47,4 +47,5 @@ executable xds-active-updater
     , lens
     , http-client
     , xds-amqp
+    , cryptohash
 
