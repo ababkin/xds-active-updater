@@ -66,5 +66,8 @@ main = do
             return Failure
 
       handler e@(StatusCodeException s _ _) = do
-        putStrLn $ "exception: " ++ show s
+        putStrLn $ "status code exception: " ++ show s
+        return Failure
+      handler e = do
+        putStrLn $ "generic exception: " ++ show e
         return Failure
